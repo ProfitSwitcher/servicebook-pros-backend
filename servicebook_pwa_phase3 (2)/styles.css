@@ -1,0 +1,43 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 1rem;
+  background-color: #f5f5f5;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+#authSection, #app {
+  margin-top: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#authSection input {
+  margin-right: 0.5rem;
+  padding: 0.5rem;
+}
+
+#authSection button, #refreshJobsBtn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: #0066cc;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#jobList {
+  list-style-type: none;
+  padding: 0;
+}
+
+#jobList li {
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #ccc;
+}

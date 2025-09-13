@@ -1,0 +1,881 @@
+openapi: 3.0.0
+info:
+  title: ServiceBook Pros API
+  version: 1.0.0
+  description: |
+    This document describes the REST API for the ServiceBook Pros backend.
+    It exposes endpoints for authentication, customers, jobs, price‑book categories
+    and items, invoices and payments.  All endpoints accept and return JSON
+    payloads and require bearer authentication unless otherwise noted.
+
+servers:
+  - url: https://api.servicebookpros.com
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+      required: [id,email,role]
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+      required: [name]
+    PriceBookCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        parent_id:
+          type: integer
+      required: [name]
+    PriceBookItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        labour_rate:
+          type: number
+          format: float
+        parts_cost:
+          type: number
+          format: float
+        price_tier:
+          type: string
+          enum: [good, better, best]
+      required: [category_id,name,labour_rate,parts_cost]
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        customer_id:
+          type: integer
+        technician_id:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled,in_progress,completed,cancelled]
+        scheduled_time:
+          type: string
+          format: date-time
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        notes:
+          type: string
+      required: [customer_id,status]
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        job_id:
+          type: integer
+        amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [draft,sent,paid,overdue,cancelled]
+        issued_at:
+          type: string
+          format: date-time
+        due_at:
+          type: string
+          format: date-time
+      required: [job_id,amount,status]
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        invoice_id:
+          type: integer
+        amount:
+          type: number
+          format: float
+        method:
+          type: string
+        paid_at:
+          type: string
+          format: date-time
+      required: [invoice_id,amount,method]
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      summary: Login and obtain a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required: [email,password]
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Create a new user account.  Only administrators should call this to add new employees; self‑service registration can be enabled if desired.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, manager, technician]
+              required: [email, password]
+      responses:
+        '201':
+          description: User created and token returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '409':
+          description: User already exists
+
+  /customers:
+    get:
+      summary: List all customers
+      responses:
+        '200':
+          description: A list of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+    post:
+      summary: Create a new customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+
+  /customers/{customerId}:
+    get:
+      summary: Get a customer by ID
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+    put:
+      summary: Update a customer by ID
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+    delete:
+      summary: Delete a customer by ID
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Customer deleted
+        '404':
+          description: Customer not found
+
+  /pricebook/categories:
+    get:
+      summary: List all price‑book categories
+      parameters:
+        - in: query
+          name: parent_id
+          schema:
+            type: integer
+          description: Return only categories that have the specified parent ID
+      responses:
+        '200':
+          description: A list of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PriceBookCategory'
+    post:
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceBookCategory'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookCategory'
+
+  /pricebook/categories/{categoryId}:
+    get:
+      summary: Get a price‑book category by ID
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookCategory'
+        '404':
+          description: Category not found
+    put:
+      summary: Update a price‑book category by ID
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceBookCategory'
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookCategory'
+        '404':
+          description: Category not found
+    delete:
+      summary: Delete a price‑book category by ID
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Category deleted
+        '404':
+          description: Category not found
+
+  /pricebook/items:
+    get:
+      summary: List price‑book items
+      parameters:
+        - in: query
+          name: category_id
+          schema:
+            type: integer
+          description: Filter items by category ID
+        - in: query
+          name: price_tier
+          schema:
+            type: string
+          description: Filter by pricing tier (good, better, best)
+      responses:
+        '200':
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PriceBookItem'
+    post:
+      summary: Create a new price‑book item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceBookItem'
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookItem'
+
+  /pricebook/items/{itemId}:
+    get:
+      summary: Get a price‑book item by ID
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Item found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookItem'
+        '404':
+          description: Item not found
+    put:
+      summary: Update a price‑book item by ID
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceBookItem'
+      responses:
+        '200':
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceBookItem'
+        '404':
+          description: Item not found
+    delete:
+      summary: Delete a price‑book item by ID
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Item not found
+
+  /jobs:
+    get:
+      summary: List jobs
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by job status
+        - in: query
+          name: customer_id
+          schema:
+            type: integer
+          description: Filter by customer ID
+        - in: query
+          name: technician_id
+          schema:
+            type: integer
+          description: Filter by technician ID
+      responses:
+        '200':
+          description: A list of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+    post:
+      summary: Create a new job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /jobs/{jobId}:
+    get:
+      summary: Get a job by ID
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+    put:
+      summary: Update a job by ID
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+      responses:
+        '200':
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+    delete:
+      summary: Delete a job by ID
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Job deleted
+        '404':
+          description: Job not found
+
+  /jobs/{jobId}/estimate:
+    post:
+      summary: Estimate the total cost of a job
+      description: Compute an estimate for a job based on selected price‑book items and quantities.
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      item_id:
+                        type: integer
+                      quantity:
+                        type: integer
+                    required: [item_id, quantity]
+              required: [items]
+      responses:
+        '200':
+          description: Estimate computed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: integer
+                  total_amount:
+                    type: number
+                    format: float
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        item_id:
+                          type: integer
+                        name:
+                          type: string
+                        quantity:
+                          type: integer
+                        unit_price:
+                          type: number
+                          format: float
+                        total_price:
+                          type: number
+                          format: float
+
+  /jobs/{jobId}/invoice:
+    post:
+      summary: Create an invoice for a job
+      description: Generate an invoice associated with a job.  If no amount is provided, the client should supply the computed estimate.
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                status:
+                  type: string
+                  enum: [draft, sent, paid, overdue, cancelled]
+                due_at:
+                  type: string
+                  format: date-time
+              required: [amount]
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  /users:
+    get:
+      summary: List all users
+      description: Admin‑only endpoint to list all registered users.
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /users/{userId}:
+    get:
+      summary: Get a user by ID
+      description: Admin‑only endpoint to retrieve a single user.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+    put:
+      summary: Update a user's role
+      description: Admin‑only endpoint to modify a user's role.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [admin, manager, technician]
+              required: [role]
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid role
+        '404':
+          description: User not found
+    delete:
+      summary: Delete a user
+      description: Admin‑only endpoint to remove a user.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: User deleted
+        '404':
+          description: User not found
+
+  /invoices:
+    get:
+      summary: List invoices
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by invoice status
+        - in: query
+          name: job_id
+          schema:
+            type: integer
+          description: Filter by job ID
+      responses:
+        '200':
+          description: A list of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+    post:
+      summary: Create a new invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  /invoices/{invoiceId}:
+    get:
+      summary: Get an invoice by ID
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invoice found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+    put:
+      summary: Update an invoice by ID
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+      responses:
+        '200':
+          description: Invoice updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+
+  /payments:
+    get:
+      summary: List payments
+      parameters:
+        - in: query
+          name: invoice_id
+          schema:
+            type: integer
+          description: Filter by invoice ID
+      responses:
+        '200':
+          description: A list of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+    post:
+      summary: Create a new payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  /payments/{paymentId}:
+    get:
+      summary: Get a payment by ID
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Payment not found
