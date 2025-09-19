@@ -117,6 +117,16 @@ function verifyPassword(password, storedHash) {
   return hash === originalHash;
 }
 
+// Health check route for Railway and other deployment platforms
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'ServiceBook Pros Backend API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Route: Register a new user
 app.post(
   '/auth/register',
