@@ -1,0 +1,18 @@
+[build]
+cmd = 'cd "servicebook_backend_phase4 (2)/servicebook_backend" && npm install'
+
+[start]
+cmd = './start.sh'
+
+[variables]
+NODE_ENV = 'production'
+PORT = '3000'
+
+[phases.setup]
+cmds = ['curl -fsSL https://deb.nodesource.com/setup_18.x | bash -', 'apt-get install -y nodejs']
+
+[phases.install]
+cmds = ['cd "servicebook_backend_phase4 (2)/servicebook_backend" && npm ci --production']
+
+[phases.build]
+cmds = ['chmod +x start.sh']

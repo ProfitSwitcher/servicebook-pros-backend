@@ -1,0 +1,31 @@
+{
+  "name": "servicebook-pros-backend",
+  "version": "1.0.0",
+  "description": "ServiceBook Pros Backend API - Complete platform for service businesses",
+  "main": "servicebook_backend_phase4 (2)/servicebook_backend/index.js",
+  "scripts": {
+    "start": "cd \"servicebook_backend_phase4 (2)/servicebook_backend\" && npm install && node index.js",
+    "dev": "cd \"servicebook_backend_phase4 (2)/servicebook_backend\" && npm install && node index.js",
+    "install-deps": "cd \"servicebook_backend_phase4 (2)/servicebook_backend\" && npm install",
+    "import-pricebook": "cd \"servicebook_backend_phase4 (2)/servicebook_backend\" && node scripts/import_pricebook.js",
+    "test": "cd \"servicebook_backend_phase4 (2)/servicebook_backend\" && npm test"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "servicebook",
+    "crm",
+    "backend",
+    "api",
+    "express",
+    "postgresql"
+  ],
+  "author": "ProfitSwitcher",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ProfitSwitcher/servicebook-pros-backend"
+  }
+}
